@@ -78,6 +78,7 @@ function sac_get_audiences() {
 	$response = wp_remote_get(
 		$url,
 		array(
+			'timeout' => 3,
 			'headers' => array(
 				'Authorization' => 'Basic ' . base64_encode( SAC_SEGMENT_TOKEN . ':' ),
 			),
@@ -86,6 +87,18 @@ function sac_get_audiences() {
 
 	if ( is_wp_error( $response ) ) {
 		wp_send_json_error( $response->get_error_message(), 502 );
+	}
+
+	$status = wp_remote_retrieve_response_code( $response );
+
+	// 404 means Segment has no profile for this visitor yet: a valid "no audiences".
+	if ( 404 === $status ) {
+		wp_send_json_success( '' );
+	}
+
+	// Anything else that isn't 200 is a real failure (bad token, rate limit, outage).
+	if ( 200 !== $status ) {
+		wp_send_json_error( 'Segment API returned HTTP ' . $status, 502 );
 	}
 
 	$body = json_decode( wp_remote_retrieve_body( $response ), true );
