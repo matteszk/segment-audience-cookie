@@ -53,6 +53,7 @@ function sac_get_audiences() {
 		wp_send_json_error( 'Segment credentials are not configured.', 500 );
 	}
 
+	// Treat browser input as untrusted: undo WordPress's added slashes, then strip tags and whitespace.
 	$user_id      = sanitize_text_field( wp_unslash( $_POST['user_id'] ?? '' ) );
 	$anonymous_id = sanitize_text_field( wp_unslash( $_POST['anonymous_id'] ?? '' ) );
 
@@ -66,6 +67,16 @@ function sac_get_audiences() {
 
 	if ( '' === $identifier ) {
 		wp_send_json_error( 'No Segment identifier provided.', 400 );
+	}
+
+	// Return a cached result if we've looked this visitor up recently.
+	// The identifier is hashed so the transient key is short and safe.
+	$cache_key = 'sac_' . md5( $identifier );
+	$cached    = get_transient( $cache_key );
+
+	// get_transient() returns false on a miss; '' is a valid cached "no audiences".
+	if ( false !== $cached ) {
+		wp_send_json_success( $cached );
 	}
 
 	$url = sprintf(
@@ -93,6 +104,7 @@ function sac_get_audiences() {
 
 	// 404 means Segment has no profile for this visitor yet: a valid "no audiences".
 	if ( 404 === $status ) {
+		set_transient( $cache_key, '', HOUR_IN_SECONDS );
 		wp_send_json_success( '' );
 	}
 
@@ -103,12 +115,16 @@ function sac_get_audiences() {
 
 	$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-	if ( empty( $body['traits'] ) || ! is_array( $body['traits'] ) ) {
-		wp_send_json_success( '' );
-	}
-
 	// Audience traits are keyed by audience name; the keys are all we need.
-	wp_send_json_success( implode( ',', array_keys( $body['traits'] ) ) );
+	// A 200 with no traits is still a valid "no audiences" result.
+	$audiences = ( ! empty( $body['traits'] ) && is_array( $body['traits'] ) )
+		? implode( ',', array_keys( $body['traits'] ) )
+		: '';
+
+	// Only successful lookups reach here, so errors are never cached.
+	set_transient( $cache_key, $audiences, HOUR_IN_SECONDS );
+	wp_send_json_success( $audiences );
 }
+// The "nopriv" hook serves logged-out visitors; the plain one serves logged-in users.
 add_action( 'wp_ajax_sac_get_audiences', 'sac_get_audiences' );
 add_action( 'wp_ajax_nopriv_sac_get_audiences', 'sac_get_audiences' );

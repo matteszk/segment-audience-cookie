@@ -21,6 +21,8 @@
 		return;
 	}
 
+	// `action` tells admin-ajax.php which wp_ajax_* hook to run.
+	// Only send IDs we have, so the server never receives the string "null".
 	const body = new URLSearchParams( { action: 'sac_get_audiences' } );
 	if ( userId ) {
 		body.append( 'user_id', userId );
@@ -38,5 +40,6 @@
 			// Session cookie: cleared when the browser closes.
 			document.cookie = 'segment_audiences=' + encodeURIComponent( res.data ) + '; path=/; SameSite=Lax';
 		} )
+		// On failure no cookie is set, so the lookup is retried on the next page.
 		.catch( ( err ) => console.warn( 'Segment Audience Cookie:', err.message ) );
 } )();
