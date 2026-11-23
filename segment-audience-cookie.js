@@ -9,7 +9,7 @@
 	}
 
 	// Already looked up this session: nothing to do.
-	if ( readCookie( 'segment_audiences' ) !== null ) {
+	if ( readCookie( sacSettings.cookieName ) !== null ) {
 		return;
 	}
 
@@ -38,7 +38,7 @@
 				throw new Error( res.data );
 			}
 			// Session cookie: cleared when the browser closes.
-			document.cookie = 'segment_audiences=' + encodeURIComponent( res.data ) + '; path=/; SameSite=Lax';
+			document.cookie = sacSettings.cookieName + '=' + encodeURIComponent( res.data ) + '; path=/; SameSite=Lax';
 		} )
 		// On failure no cookie is set, so the lookup is retried on the next page.
 		.catch( ( err ) => console.warn( 'Segment Audience Cookie:', err.message ) );

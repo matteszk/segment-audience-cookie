@@ -38,7 +38,11 @@ function sac_enqueue_script() {
 	wp_localize_script(
 		'segment-audience-cookie',
 		'sacSettings',
-		array( 'ajaxUrl' => admin_url( 'admin-ajax.php' ) )
+		array(
+			'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+			// Let sites rename the cookie, e.g. to match existing personalization code.
+			'cookieName' => apply_filters( 'sac_cookie_name', 'segment_audiences' ),
+		)
 	);
 }
 add_action( 'wp_enqueue_scripts', 'sac_enqueue_script' );
@@ -72,6 +76,8 @@ function sac_get_audiences() {
 	// Return a cached result if we've looked this visitor up recently.
 	// The identifier is hashed so the transient key is short and safe.
 	$cache_key = 'sac_' . md5( $identifier );
+	// Let sites tune how long results are cached (in seconds).
+	$cache_ttl = (int) apply_filters( 'sac_cache_ttl', HOUR_IN_SECONDS );
 	$cached    = get_transient( $cache_key );
 
 	// get_transient() returns false on a miss; '' is a valid cached "no audiences".
@@ -104,7 +110,7 @@ function sac_get_audiences() {
 
 	// 404 means Segment has no profile for this visitor yet: a valid "no audiences".
 	if ( 404 === $status ) {
-		set_transient( $cache_key, '', HOUR_IN_SECONDS );
+		set_transient( $cache_key, '', $cache_ttl );
 		wp_send_json_success( '' );
 	}
 
@@ -122,7 +128,7 @@ function sac_get_audiences() {
 		: '';
 
 	// Only successful lookups reach here, so errors are never cached.
-	set_transient( $cache_key, $audiences, HOUR_IN_SECONDS );
+	set_transient( $cache_key, $audiences, $cache_ttl );
 	wp_send_json_success( $audiences );
 }
 // The "nopriv" hook serves logged-out visitors; the plain one serves logged-in users.
