@@ -5,7 +5,12 @@
 	// Read a cookie by name. Segment's analytics.js stores IDs as JSON strings, so strip quotes.
 	function readCookie( name ) {
 		const match = document.cookie.match( new RegExp( '(?:^|; )' + name + '=([^;]*)' ) );
-		return match ? decodeURIComponent( match[ 1 ] ).replace( /^"|"$/g, '' ) : '';
+		return match ? decodeURIComponent( match[ 1 ] ).replace( /^"|"$/g, '' ) : null;
+	}
+
+	// Already looked up this session: nothing to do.
+	if ( readCookie( 'segment_audiences' ) !== null ) {
+		return;
 	}
 
 	const userId = readCookie( 'ajs_user_id' );

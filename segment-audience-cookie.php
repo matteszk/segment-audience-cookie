@@ -88,7 +88,7 @@ function sac_get_audiences() {
 	$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 	if ( empty( $body['traits'] ) || ! is_array( $body['traits'] ) ) {
-		wp_send_json_error( 'No audiences found.', 404 );
+		wp_send_json_success( '' );
 	}
 
 	// Audience traits are keyed by audience name; the keys are all we need.
