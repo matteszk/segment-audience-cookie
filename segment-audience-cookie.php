@@ -53,12 +53,15 @@ function sac_get_audiences() {
 		wp_send_json_error( 'Segment credentials are not configured.', 500 );
 	}
 
+	$user_id      = sanitize_text_field( wp_unslash( $_POST['user_id'] ?? '' ) );
+	$anonymous_id = sanitize_text_field( wp_unslash( $_POST['anonymous_id'] ?? '' ) );
+
 	// A known user ID is more specific than an anonymous ID, so check it first.
 	$identifier = '';
-	if ( ! empty( $_POST['user_id'] ) ) {
-		$identifier = 'user_id:' . $_POST['user_id'];
-	} elseif ( ! empty( $_POST['anonymous_id'] ) ) {
-		$identifier = 'anonymous_id:' . $_POST['anonymous_id'];
+	if ( '' !== $user_id ) {
+		$identifier = 'user_id:' . $user_id;
+	} elseif ( '' !== $anonymous_id ) {
+		$identifier = 'anonymous_id:' . $anonymous_id;
 	}
 
 	if ( '' === $identifier ) {
